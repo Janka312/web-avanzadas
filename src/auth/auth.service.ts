@@ -48,22 +48,17 @@ export class AuthService {
     }
   }
 
-  async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
+  async updatePassword(updatePasswordDto: UpdatePasswordDto) {
     const { email, newPassword } = updatePasswordDto;
 
-    // Encuentra el usuario por su ID
+    // Encuentra el usuario por su email
     const user = await this.userRepository.findOne({
-      where: { id: userId },
+      where: { email },
       select: ['id', 'password', 'email'],
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
-    }
-
-    // Verifica si el email proporcionado coincide con el email del usuario
-    if (user.email !== email) {
-      throw new UnauthorizedException('Email does not match');
     }
 
     // Encripta la nueva contraseña y guarda el usuario actualizado

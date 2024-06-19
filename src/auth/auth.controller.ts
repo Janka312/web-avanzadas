@@ -37,12 +37,11 @@ export class AuthController {
     return this.authService.login(loginUserDto);
   }
 
-  @Patch('recover-password/:id')
+  @Patch('recover-password')
   async recoverPassword(
-    @Param('id', ParseUUIDPipe) userId: string,
-    @Body() updatePasswordDto: UpdatePasswordDto,
+    @Body() updatePasswordDto: UpdatePasswordDto
   ) {
-    return this.authService.updatePassword(userId, updatePasswordDto);
+    return this.authService.updatePassword(updatePasswordDto);
   }
 
   @Get('check-status')
