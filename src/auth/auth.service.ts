@@ -1,4 +1,10 @@
-import { BadGatewayException, BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 import { Repository } from 'typeorm';
 
@@ -9,91 +15,100 @@ import { User } from './entities/user.entity';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { JwtPayload } from './interfaces/jwt-payload.interfaces';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
-
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
-
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
     private readonly jwtService: JwtService,
-  ){}
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
-    
     try {
-
       const { password, ...userData } = createUserDto;
-      
-      const user = this.userRepository.create( {
-        ...userData,
-        password: bcrypt.hashSync( password, 10)
-      } );
 
-      await this.userRepository.save( user )
+      const user = this.userRepository.create({
+        ...userData,
+        password: bcrypt.hashSync(password, 10),
+      });
+
+      await this.userRepository.save(user);
       delete user.password;
 
       return {
         ...user,
-        token: this.getJwtToken({ id: user.id })
+        token: this.getJwtToken({ id: user.id }),
       };
-
     } catch (error) {
-
       this.handleDBErrors(error);
-
     }
   }
 
+  async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
+    const { currentPassword, newPassword } = updatePasswordDto;
 
-  async login( loginUserDto: LoginUserDto){
+    // Encuentra el usuario por su ID
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'password'],
+    });
 
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verifica si la contraseña actual en texto plano coincide con la almacenada encriptada
+    if (!bcrypt.compareSync(currentPassword, user.password)) {
+      throw new UnauthorizedException('Current password is not valid');
+    }
+
+    // Encripta la nueva contraseña y guarda el usuario actualizado
+    user.password = bcrypt.hashSync(newPassword, 10);
+    await this.userRepository.save(user);
+
+    return { message: 'Password updated successfully' };
+  }
+
+  async login(loginUserDto: LoginUserDto) {
     const { password, email } = loginUserDto;
 
     const user = await this.userRepository.findOne({
       where: { email },
-      select: { email: true, password: true, id: true }
-    })
+      select: { email: true, password: true, id: true },
+    });
 
-    if ( !user )
+    if (!user)
       throw new UnauthorizedException('Credentials are not valid (email) ');
 
-    if ( !bcrypt.compareSync( password, user.password ) )
+    if (!bcrypt.compareSync(password, user.password))
       throw new UnauthorizedException('Credentiasl are not valid (password)');
 
     return {
       ...user,
-      token: this.getJwtToken({ id: user.id })
+      token: this.getJwtToken({ id: user.id }),
     };
-    
   }
 
-  async checkAuthStatus( user: User ){
-
+  async checkAuthStatus(user: User) {
     return {
       ...user,
-      token: this.getJwtToken({ id: user.id })
+      token: this.getJwtToken({ id: user.id }),
     };
-
   }
 
-  private getJwtToken( payload: JwtPayload ){
-
-    const token = this.jwtService.sign( payload );
+  private getJwtToken(payload: JwtPayload) {
+    const token = this.jwtService.sign(payload);
     return token;
-
   }
 
-  private handleDBErrors( error: any ): never{
+  private handleDBErrors(error: any): never {
+    if (error.code === '23505') throw new BadRequestException(error.detail);
 
-    if ( error.code === '23505' )
-      throw new BadRequestException( error.detail );
-    
-    console.log(error)
+    console.log(error);
 
-    throw new InternalServerErrorException('Please check server logs')
+    throw new InternalServerErrorException('Please check server logs');
   }
- 
 }

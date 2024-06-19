@@ -1,6 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, SetMetadata } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  SetMetadata,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto  } from './dto';
+import { CreateUserDto, LoginUserDto } from './dto';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from './entities/user.entity';
 import { RawHeaders, GetUser, Auth } from './decorators';
@@ -8,12 +20,12 @@ import { UserRoleGuard } from './guards/user-role/user-role.guard';
 import { RoleProtected } from './decorators/role-protected.decorator';
 import { ValidRoles } from './interfaces';
 import { ApiTags } from '@nestjs/swagger';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
 
   @Post('register')
   createUser(@Body() createUserDto: CreateUserDto) {
@@ -25,59 +37,56 @@ export class AuthController {
     return this.authService.login(loginUserDto);
   }
 
+  @Patch('update-password/:id')
+  @UseGuards(AuthGuard())
+  updatePassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    return this.authService.updatePassword(id, updatePasswordDto);
+  }
+
   @Get('check-status')
   @Auth()
-  checkAuthStatus(
-    @GetUser() user: User
-  ){
-    return this.authService.checkAuthStatus( user );
+  checkAuthStatus(@GetUser() user: User) {
+    return this.authService.checkAuthStatus(user);
   }
 
   @Get('private')
-  @UseGuards( AuthGuard() )
+  @UseGuards(AuthGuard())
   testingPrivateRout(
     @Req() request: Express.Request,
     @GetUser() user: User,
     @GetUser('email') userEmail: string,
     @RawHeaders() rawHeaders: string[],
-  ){
-
+  ) {
     console.log(request);
- 
 
-    return{
+    return {
       ok: true,
       message: 'Hola mundo private',
       user,
       userEmail,
-      rawHeaders
-    }
+      rawHeaders,
+    };
   }
 
   @Get('private2')
-  @RoleProtected( ValidRoles.superUser )
-  @UseGuards( AuthGuard(), UserRoleGuard )
-  privateRoute2(
-    @GetUser() user: User
-  ){
-
-    return{
+  @RoleProtected(ValidRoles.superUser)
+  @UseGuards(AuthGuard(), UserRoleGuard)
+  privateRoute2(@GetUser() user: User) {
+    return {
       ok: true,
-      user
-    }
+      user,
+    };
   }
 
   @Get('private3')
   @Auth(ValidRoles.admin, ValidRoles.superUser)
-  privateRoute3(
-    @GetUser() user: User
-  ){
-
-    return{
+  privateRoute3(@GetUser() user: User) {
+    return {
       ok: true,
-      user
-    }
+      user,
+    };
   }
-
- 
 }
