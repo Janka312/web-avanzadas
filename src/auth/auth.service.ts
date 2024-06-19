@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 
@@ -48,21 +49,21 @@ export class AuthService {
   }
 
   async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
-    const { currentPassword, newPassword } = updatePasswordDto;
+    const { email, newPassword } = updatePasswordDto;
 
     // Encuentra el usuario por su ID
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'password'],
+      select: ['id', 'password', 'email'],
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new NotFoundException('User not found');
     }
 
-    // Verifica si la contraseña actual en texto plano coincide con la almacenada encriptada
-    if (!bcrypt.compareSync(currentPassword, user.password)) {
-      throw new UnauthorizedException('Current password is not valid');
+    // Verifica si el email proporcionado coincide con el email del usuario
+    if (user.email !== email) {
+      throw new UnauthorizedException('Email does not match');
     }
 
     // Encripta la nueva contraseña y guarda el usuario actualizado
