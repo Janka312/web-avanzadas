@@ -18,7 +18,7 @@ async function bootstrap() {
   );
 
   app.enableCors(
-    process.env.NODE_ENV === 'prod'
+    process.env.STAGE === 'prod'
       ? { origin: 'https://web-avanzadas-production.up.railway.app' }
       : {
           origin: '*', // Permite cualquier origen en desarrollo
