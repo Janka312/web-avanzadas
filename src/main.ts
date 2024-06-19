@@ -10,18 +10,26 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  app.useGlobalPipes( 
+  app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-    })
-   );
+    }),
+  );
+
+  app.enableCors(
+    process.env.NODE_ENV === 'prod'
+      ? { origin: 'https://web-avanzadas-production.up.railway.app' }
+      : {
+          origin: '*', // Permite cualquier origen en desarrollo
+        },
+  );
 
   const config = new DocumentBuilder()
-   .setTitle('Teslo RESTFul API')
-   .setDescription('Teslo shop endpoints')
-   .setVersion('1.0')
-   .build();
+    .setTitle('Teslo RESTFul API')
+    .setDescription('Teslo shop endpoints')
+    .setVersion('1.0')
+    .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
